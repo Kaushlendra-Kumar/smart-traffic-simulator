@@ -1,5 +1,7 @@
 #include "traffic/infrastructure/command_parser.hpp"
 
+#include <sstream>
+
 #include "traffic/infrastructure/scenario_io.hpp"
 
 namespace traffic {
@@ -13,6 +15,12 @@ struct overloaded : Ts... {
   using Ts::operator()...;
 };
 
+std::string fmt(double x) {
+  std::ostringstream os;
+  os << x;
+  return os.str();
+}
+
 struct Fields {
   const json& j;
   std::string error;
@@ -25,7 +33,7 @@ struct Fields {
     if (!j[key].is_number()) return fail(std::string("'") + key + "' must be a number");
     const double v = j[key].get<double>();
     if (!(v >= lo && v <= hi))
-      return fail(std::string("'") + key + "' must be in [" + std::to_string(lo) + ", " + std::to_string(hi) + "]");
+      return fail(std::string("'") + key + "' must be in [" + fmt(lo) + ", " + fmt(hi) + "]");
     out = v;
     return true;
   }
