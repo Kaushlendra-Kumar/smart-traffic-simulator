@@ -114,6 +114,16 @@ ExperimentResult ExperimentRunner::run(const ExperimentSpec& spec, const Progres
   return result;
 }
 
+namespace {
+/// Human-readable controller names for explanations (labels set by users pass through).
+std::string pretty(const std::string& name) {
+  if (name == "fixed_time") return "Fixed-time";
+  if (name == "adaptive") return "Adaptive";
+  if (name == "max_pressure") return "Max-pressure";
+  return name;
+}
+}  // namespace
+
 void ExperimentRunner::analyse(ExperimentResult& result) {
   const std::size_t nc = result.controllers.size();
   const std::size_t ns = result.seeds.size();
@@ -184,9 +194,9 @@ void ExperimentRunner::analyse(ExperimentResult& result) {
       std::snprintf(buf, sizeof buf,
                     "%s %s average delay by %.1f s (%s) versus %s; 95%% CI of the paired difference [%+.1f, %+.1f] s; "
                     "better in %d of %d seeds. %s",
-                    cmp.candidate.c_str(), verdict, std::abs(d->diff_mean),
+                    pretty(cmp.candidate).c_str(), verdict, std::abs(d->diff_mean),
                     d->pct_change ? (std::to_string(static_cast<int>(std::lround(*d->pct_change))) + "%").c_str() : "n/a",
-                    cmp.baseline.c_str(), d->diff_mean - d->diff_ci95, d->diff_mean + d->diff_ci95, d->candidate_better,
+                    pretty(cmp.baseline).c_str(), d->diff_mean - d->diff_ci95, d->diff_mean + d->diff_ci95, d->candidate_better,
                     d->n,
                     d->n < 2 ? "Use more seeds for a confidence interval."
                     : significant ? "The difference is larger than seed-to-seed noise."
@@ -199,13 +209,13 @@ void ExperimentRunner::analyse(ExperimentResult& result) {
       std::snprintf(buf, sizeof buf,
                     "%s changed phase %.0f times per run versus %.0f for %s, spending %.1f%% of signal time in yellow/all-red "
                     "clearance versus %.1f%%. More switching shortens waits but adds lost time.",
-                    cmp.candidate.c_str(), sw->candidate_mean, sw->baseline_mean, cmp.baseline.c_str(),
+                    pretty(cmp.candidate).c_str(), sw->candidate_mean, sw->baseline_mean, pretty(cmp.baseline).c_str(),
                     100.0 * cl->candidate_mean, 100.0 * cl->baseline_mean);
       result.explanations.push_back(buf);
     }
     if (const auto* p = find(cmp, "ped_avg_wait"); p && p->n > 0 && (p->baseline_mean > 0 || p->candidate_mean > 0)) {
       std::snprintf(buf, sizeof buf, "Pedestrians waited %.1f s on average under %s versus %.1f s under %s.",
-                    p->candidate_mean, cmp.candidate.c_str(), p->baseline_mean, cmp.baseline.c_str());
+                    p->candidate_mean, pretty(cmp.candidate).c_str(), p->baseline_mean, pretty(cmp.baseline).c_str());
       result.explanations.push_back(buf);
     }
   }
@@ -252,7 +262,7 @@ void ExperimentRunner::analyse(ExperimentResult& result) {
     const auto& sh = shares[0][worst_key];
     std::snprintf(buf, sizeof buf,
                   "At node %d, %s gave phase \"%s\" %.0f%% of green time while it carried %.0f%% of arriving vehicles.",
-                  worst_key.first, result.controllers[0].c_str(), sh.phase.c_str(), 100.0 * sh.green / g,
+                  worst_key.first, pretty(result.controllers[0]).c_str(), sh.phase.c_str(), 100.0 * sh.green / g,
                   100.0 * sh.arrivals / a);
     std::string text = buf;
     for (std::size_t c = 1; c < nc; ++c) {
@@ -260,7 +270,7 @@ void ExperimentRunner::analyse(ExperimentResult& result) {
       double gc, ac;
       node_totals(shares[c], worst_key.first, gc, ac);
       if (it == shares[c].end() || gc <= 0) continue;
-      std::snprintf(buf, sizeof buf, " %s gave it %.0f%%.", result.controllers[c].c_str(), 100.0 * it->second.green / gc);
+      std::snprintf(buf, sizeof buf, " %s gave it %.0f%%.", pretty(result.controllers[c]).c_str(), 100.0 * it->second.green / gc);
       text += buf;
     }
     result.explanations.push_back(text);
