@@ -1,0 +1,56 @@
+{
+  "dt": 0.1,
+  "seed": 1,
+  "duration": 1500,
+  "warmup": 120,
+  "routing": "free_flow_time",
+  "demand": {
+    "default_rate_vph": 220,
+    "vehicle_mix": {
+      "car": 0.92,
+      "bus": 0.06,
+      "emergency": 0.02
+    }
+  },
+  "pedestrians": {
+    "rate_per_hour": 90
+  },
+  "signals": {
+    "min_green": 7,
+    "max_green": 60,
+    "yellow": 3.5,
+    "all_red": 1.5,
+    "fixed_green": 20,
+    "phasing": "auto"
+  },
+  "controller": {
+    "type": "fixed_time"
+  },
+  "id": "city-grid",
+  "name": "City district (3\u00d73 grid)",
+  "description": "Nine signalised intersections on a 200 m grid. The road between intersections 4 and 5 closes at t=300 s; vehicles reroute.",
+  "network": {
+    "grid": {
+      "rows": 3,
+      "cols": 3,
+      "block_length": 200,
+      "stub_length": 200,
+      "lanes": 2,
+      "speed_limit_kmh": 50
+    }
+  },
+  "events": [
+    {
+      "time": 300,
+      "action": "close_road",
+      "from": 4,
+      "to": 5
+    },
+    {
+      "time": 300,
+      "action": "close_road",
+      "from": 5,
+      "to": 4
+    }
+  ]
+}

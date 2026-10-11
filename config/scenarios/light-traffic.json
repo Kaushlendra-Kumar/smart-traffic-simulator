@@ -1,0 +1,95 @@
+{
+  "dt": 0.1,
+  "seed": 1,
+  "duration": 1200,
+  "warmup": 120,
+  "routing": "free_flow_time",
+  "demand": {
+    "default_rate_vph": 120,
+    "vehicle_mix": {
+      "car": 0.92,
+      "bus": 0.06,
+      "emergency": 0.02
+    }
+  },
+  "pedestrians": {
+    "rate_per_hour": 60
+  },
+  "signals": {
+    "min_green": 7,
+    "max_green": 60,
+    "yellow": 3.5,
+    "all_red": 1.5,
+    "fixed_green": 20,
+    "phasing": "auto"
+  },
+  "controller": {
+    "type": "fixed_time"
+  },
+  "id": "light-traffic",
+  "name": "Light traffic",
+  "description": "Off-peak demand. Fixed-time signals waste green on empty approaches; demand-responsive control can skip them.",
+  "network": {
+    "nodes": [
+      {
+        "id": 0,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": 1,
+        "x": 0,
+        "y": 300
+      },
+      {
+        "id": 2,
+        "x": 300,
+        "y": 0
+      },
+      {
+        "id": 3,
+        "x": 0,
+        "y": -300
+      },
+      {
+        "id": 4,
+        "x": -300,
+        "y": 0
+      }
+    ],
+    "roads": [
+      {
+        "from": 1,
+        "to": 0,
+        "lanes": 2,
+        "speed_limit_kmh": 50,
+        "two_way": true,
+        "name": "North Rd"
+      },
+      {
+        "from": 2,
+        "to": 0,
+        "lanes": 2,
+        "speed_limit_kmh": 50,
+        "two_way": true,
+        "name": "East Rd"
+      },
+      {
+        "from": 3,
+        "to": 0,
+        "lanes": 2,
+        "speed_limit_kmh": 50,
+        "two_way": true,
+        "name": "South Rd"
+      },
+      {
+        "from": 4,
+        "to": 0,
+        "lanes": 2,
+        "speed_limit_kmh": 50,
+        "two_way": true,
+        "name": "West Rd"
+      }
+    ]
+  }
+}

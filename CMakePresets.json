@@ -1,0 +1,24 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {"major": 3, "minor": 20, "patch": 0},
+  "configurePresets": [
+    {"name": "debug",   "displayName": "Debug",   "binaryDir": "${sourceDir}/build/debug",   "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug"}},
+    {"name": "release", "displayName": "Release", "binaryDir": "${sourceDir}/build/release", "cacheVariables": {"CMAKE_BUILD_TYPE": "Release"}},
+    {"name": "asan",    "displayName": "Address + UB sanitizers", "binaryDir": "${sourceDir}/build/asan",
+     "cacheVariables": {"CMAKE_BUILD_TYPE": "RelWithDebInfo", "TRAFFIC_SANITIZE": "address,undefined", "TRAFFIC_BUILD_BENCHMARKS": "OFF"}},
+    {"name": "tsan",    "displayName": "Thread sanitizer", "binaryDir": "${sourceDir}/build/tsan",
+     "cacheVariables": {"CMAKE_BUILD_TYPE": "RelWithDebInfo", "TRAFFIC_SANITIZE": "thread", "TRAFFIC_BUILD_BENCHMARKS": "OFF"}}
+  ],
+  "buildPresets": [
+    {"name": "debug", "configurePreset": "debug"},
+    {"name": "release", "configurePreset": "release"},
+    {"name": "asan", "configurePreset": "asan"},
+    {"name": "tsan", "configurePreset": "tsan"}
+  ],
+  "testPresets": [
+    {"name": "debug", "configurePreset": "debug", "output": {"outputOnFailure": true}},
+    {"name": "release", "configurePreset": "release", "output": {"outputOnFailure": true}},
+    {"name": "asan", "configurePreset": "asan", "output": {"outputOnFailure": true}},
+    {"name": "tsan", "configurePreset": "tsan", "output": {"outputOnFailure": true}}
+  ]
+}

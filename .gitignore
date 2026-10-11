@@ -1,0 +1,10 @@
+build/
+cmake-build-*/
+.cache/
+compile_commands.json
+frontend/node_modules/
+frontend/dist/
+*.csv
+!docs/**/*.csv
+.DS_Store
+data/experiments/

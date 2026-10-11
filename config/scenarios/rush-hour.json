@@ -1,0 +1,117 @@
+{
+  "dt": 0.1,
+  "seed": 1,
+  "duration": 1800,
+  "warmup": 120,
+  "routing": "free_flow_time",
+  "demand": {
+    "default_rate_vph": 260,
+    "vehicle_mix": {
+      "car": 0.92,
+      "bus": 0.06,
+      "emergency": 0.02
+    },
+    "profile": [
+      [
+        0,
+        0.6
+      ],
+      [
+        300,
+        0.8
+      ],
+      [
+        600,
+        1.6
+      ],
+      [
+        1200,
+        1.6
+      ],
+      [
+        1500,
+        0.8
+      ]
+    ]
+  },
+  "pedestrians": {
+    "rate_per_hour": 120
+  },
+  "signals": {
+    "min_green": 7,
+    "max_green": 60,
+    "yellow": 3.5,
+    "all_red": 1.5,
+    "fixed_green": 20,
+    "phasing": "auto"
+  },
+  "controller": {
+    "type": "fixed_time"
+  },
+  "id": "rush-hour",
+  "name": "Rush-hour peak",
+  "description": "Demand ramps from 0.6x to 1.6x of the base rate between 5 and 12 minutes, then eases off.",
+  "network": {
+    "nodes": [
+      {
+        "id": 0,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": 1,
+        "x": 0,
+        "y": 300
+      },
+      {
+        "id": 2,
+        "x": 300,
+        "y": 0
+      },
+      {
+        "id": 3,
+        "x": 0,
+        "y": -300
+      },
+      {
+        "id": 4,
+        "x": -300,
+        "y": 0
+      }
+    ],
+    "roads": [
+      {
+        "from": 1,
+        "to": 0,
+        "lanes": 2,
+        "speed_limit_kmh": 50,
+        "two_way": true,
+        "name": "North Rd"
+      },
+      {
+        "from": 2,
+        "to": 0,
+        "lanes": 2,
+        "speed_limit_kmh": 50,
+        "two_way": true,
+        "name": "East Rd"
+      },
+      {
+        "from": 3,
+        "to": 0,
+        "lanes": 2,
+        "speed_limit_kmh": 50,
+        "two_way": true,
+        "name": "South Rd"
+      },
+      {
+        "from": 4,
+        "to": 0,
+        "lanes": 2,
+        "speed_limit_kmh": 50,
+        "two_way": true,
+        "name": "West Rd"
+      }
+    ]
+  }
+}
