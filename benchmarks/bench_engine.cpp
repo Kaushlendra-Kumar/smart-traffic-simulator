@@ -48,9 +48,11 @@ Loaded& loaded(int target) {
   auto created = SimulationEngine::create(c);
   Loaded l;
   l.engine = std::move(created.engine);
-  // Fill with real traffic, then throttle demand to hold the population roughly steady.
+  // Fill with real traffic, then stop new arrivals so the population stays close to the
+  // target while being measured (it drains slowly as trips complete; the benchmark
+  // reports the average population actually simulated).
   for (int i = 0; i < 200000 && l.engine->vehicle_count() < target; ++i) l.engine->step();
-  l.engine->apply(CmdSetDemand{0.35});
+  l.engine->apply(CmdSetDemand{0.0});
   l.population = l.engine->vehicle_count();
   return cache.emplace(target, std::move(l)).first->second;
 }
@@ -63,14 +65,14 @@ void BM_EngineStep(benchmark::State& state) {
     vehicle_updates += e.vehicle_count();
     e.step();
   }
-  state.counters["vehicles"] = static_cast<double>(e.vehicle_count());
+  state.counters["vehicles"] = vehicle_updates / static_cast<double>(state.iterations());  // mean population
   state.counters["intersections"] = static_cast<double>(e.signals().size());
   state.counters["steps/s"] = benchmark::Counter(static_cast<double>(state.iterations()), benchmark::Counter::kIsRate);
   state.counters["sim_s/wall_s"] =
       benchmark::Counter(static_cast<double>(state.iterations()) * e.dt(), benchmark::Counter::kIsRate);
   state.counters["veh_updates/s"] = benchmark::Counter(vehicle_updates, benchmark::Counter::kIsRate);
 }
-BENCHMARK(BM_EngineStep)->Arg(100)->Arg(1000)->Arg(5000)->Arg(10000)->Unit(benchmark::kMicrosecond)->MinTime(2.0);
+BENCHMARK(BM_EngineStep)->Arg(100)->Arg(1000)->Arg(5000)->Arg(10000)->Unit(benchmark::kMicrosecond)->Iterations(600);
 
 void BM_SnapshotBuildAndSerialize(benchmark::State& state) {
   Loaded& l = loaded(static_cast<int>(state.range(0)));

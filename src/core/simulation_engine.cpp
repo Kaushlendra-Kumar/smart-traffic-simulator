@@ -117,6 +117,10 @@ EngineCreateResult SimulationEngine::create(const ScenarioConfig& config) {
   }
   if (!errors.empty()) return out;
 
+  eng->movements_into_road_.assign(eng->net_.roads.size(), 0);
+  for (const auto& m : eng->net_.movements) ++eng->movements_into_road_[static_cast<std::size_t>(m.out)];
+  eng->road_vehicles_.assign(eng->net_.roads.size(), 0);
+  for (const auto& n : eng->net_.nodes) eng->ped_oldest_.emplace_back(n.crosswalks.size(), 0.0);
   eng->build_controllers(config.controller);
   eng->istats_.resize(eng->signals_.size());
   eng->queue_integral_.assign(eng->signals_.size(), 0.0);
@@ -214,9 +218,15 @@ double SimulationEngine::route_cost(const Road& r) const {
 void SimulationEngine::generate_demand() {
   trip_buffer_.clear();
   spawner_.generate(time(), dt(), trip_buffer_);
+  const auto cost = [this](const Road& r) { return route_cost(r); };
   for (const auto& trip : trip_buffer_) {
     metrics_.on_trip_requested();
-    backlog_[static_cast<std::size_t>(trip.origin)].push_back(trip);
+    auto route = route_between(net_, trip.origin, trip.destination, cost);
+    if (!route) {
+      metrics_.on_unserved();
+      continue;
+    }
+    backlog_[static_cast<std::size_t>(trip.origin)].push_back({trip, std::move(*route)});
   }
 }
 
@@ -224,13 +234,19 @@ void SimulationEngine::admit_from_backlog() {
   const auto cost = [this](const Road& r) { return route_cost(r); };
   for (auto& queue : backlog_) {
     if (queue.empty()) continue;
-    const TripRequest& trip = queue.front();
-    auto route = route_between(net_, trip.origin, trip.destination, cost);
-    if (!route) {
-      metrics_.on_unserved();
-      queue.pop_front();
-      continue;
+    PendingTrip& pending = queue.front();
+    const TripRequest& trip = pending.trip;
+    // Replan only if a closure invalidated the cached route.
+    if (std::any_of(pending.route.begin(), pending.route.end(), [this](RoadId r) { return net_.road(r).closed; })) {
+      auto fresh = route_between(net_, trip.origin, trip.destination, cost);
+      if (!fresh) {
+        metrics_.on_unserved();
+        queue.pop_front();
+        continue;
+      }
+      pending.route = std::move(*fresh);
     }
+    std::vector<RoadId>* route = &pending.route;
     const Road& road = net_.road(route->front());
     TurnType turn = TurnType::Straight;
     if (route->size() > 1) turn = net_.movement(net_.find_movement(route->at(0), route->at(1))).turn;
@@ -321,6 +337,18 @@ void SimulationEngine::set_next_movement(Vehicle& v) {
 void SimulationEngine::update_signals() {
   const double t = time();
   const double gap_out = controller_cfg_.gap_out_seconds;
+  // Per-step aggregates shared by every intersection (one pass each).
+  for (const auto& r : net_.roads) {
+    int n = 0;
+    for (const auto& lane : r.lanes) n += static_cast<int>(lane.vehicles.size());
+    road_vehicles_[static_cast<std::size_t>(r.id)] = n;
+  }
+  for (auto& per_node : ped_oldest_) std::fill(per_node.begin(), per_node.end(), 0.0);
+  for (const auto& p : peds_.pedestrians())
+    if (!p.crossing()) {
+      double& o = ped_oldest_[static_cast<std::size_t>(p.node)][static_cast<std::size_t>(p.crosswalk)];
+      o = std::max(o, t - p.arrival_time);
+    }
   for (std::size_t k = 0; k < signals_.size(); ++k) {
     TrafficSignal& sig = signals_[k];
     const Node& node = net_.node(sig.node());
@@ -353,12 +381,6 @@ void SimulationEngine::update_signals() {
         }
       }
     }
-    // Downstream occupancy per outgoing road for max-pressure.
-    auto road_count = [this](RoadId r) {
-      int n = 0;
-      for (const auto& lane : net_.road(r).lanes) n += static_cast<int>(lane.vehicles.size());
-      return n;
-    };
 
     IntersectionObservation obs;
     obs.node = sig.node();
@@ -379,15 +401,16 @@ void SimulationEngine::update_signals() {
         po.wait_sum += mo.wait_sum;
         po.oldest_wait = std::max(po.oldest_wait, mo.oldest);
         po.emergency = po.emergency || mo.emergency;
-        const RoadId out = net_.movement(m).out;
-        int feeding = 0;
-        for (MovementId other : node.movements) feeding += net_.movement(other).out == out ? 1 : 0;
-        po.pressure += (mo.queued + mo.approaching) - static_cast<double>(road_count(out)) / std::max(feeding, 1);
+        // Max-pressure: upstream demand minus downstream occupancy (shared among the
+        // movements that discharge into the same road).
+        const auto out = static_cast<std::size_t>(net_.movement(m).out);
+        po.pressure += (mo.queued + mo.approaching) -
+                       static_cast<double>(road_vehicles_[out]) / std::max(movements_into_road_[out], 1);
       }
       for (int c : phase.crosswalks) {
         po.pedestrians_waiting += peds_.waiting(node.id, c);
-        if (peds_.waiting(node.id, c) > 0)
-          po.oldest_pedestrian_wait = std::max(po.oldest_pedestrian_wait, peds_.oldest_wait(node.id, c, t));
+        po.oldest_pedestrian_wait = std::max(
+            po.oldest_pedestrian_wait, ped_oldest_[static_cast<std::size_t>(node.id)][static_cast<std::size_t>(c)]);
       }
     }
     // Pedestrian recall within the current green.
@@ -925,9 +948,9 @@ double SimulationEngine::unfinished_delay(long* measured_count) const {
     ++n;
   }
   for (const auto& q : backlog_)
-    for (const auto& trip : q)
-      if (trip.demand_time >= config_.warmup) {
-        delay += t - trip.demand_time;
+    for (const auto& pending : q)
+      if (pending.trip.demand_time >= config_.warmup) {
+        delay += t - pending.trip.demand_time;
         ++n;
       }
   *measured_count = n;
@@ -1078,9 +1101,10 @@ CommandResult SimulationEngine::apply_impl(const EngineCommand& command) {
               return CommandResult::fail("origin must emit and destination must accept traffic");
             if (!route_between(net_, c.origin, c.destination, [this](const Road& r) { return route_cost(r); }))
               return CommandResult::fail("no open route between those nodes");
+            auto route = route_between(net_, c.origin, c.destination, [this](const Road& r) { return route_cost(r); });
             TripRequest trip = spawner_.manual_trip(c.type, c.origin, c.destination, time());
             metrics_.on_trip_requested();
-            backlog_[static_cast<std::size_t>(c.origin)].push_front(trip);
+            backlog_[static_cast<std::size_t>(c.origin)].push_front({trip, std::move(*route)});
             return CommandResult::success();
           },
       },

@@ -153,7 +153,11 @@ class SimulationEngine {
   int active_ = 0;
 
   VehicleSpawner spawner_;
-  std::vector<std::deque<TripRequest>> backlog_;  // per origin node
+  struct PendingTrip {
+    TripRequest trip;
+    std::vector<RoadId> route;  // planned once; replanned only if a road on it closes
+  };
+  std::vector<std::deque<PendingTrip>> backlog_;  // per origin node
   std::vector<TripRequest> trip_buffer_;
 
   PedestrianModel peds_;
@@ -163,6 +167,9 @@ class SimulationEngine {
   std::vector<int> signal_of_node_;  // node id -> index into signals_, -1 if none
   std::vector<std::unique_ptr<SignalController>> controllers_;
   std::vector<std::vector<MovementObs>> movement_obs_;  // per signal, per local movement
+  std::vector<int> road_vehicles_;                     // per road, refreshed each step
+  std::vector<int> movements_into_road_;               // static: movements discharging into each road
+  std::vector<std::vector<double>> ped_oldest_;        // per node, per crosswalk, refreshed each step
 
   MetricsCollector metrics_;
   std::vector<IntersectionStats> istats_;
