@@ -1,0 +1,25 @@
+services:
+  traffic:
+    build: .
+    image: smart-traffic-simulator:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      # Scenarios created through the API are persisted on the host.
+      - ./config/scenarios:/app/config/scenarios
+    restart: unless-stopped
+
+  # Optional hot-reloading frontend for UI work: `docker compose --profile dev up`
+  frontend-dev:
+    profiles: ["dev"]
+    image: node:22-bookworm-slim
+    working_dir: /app
+    command: sh -c "npm ci --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
+    environment:
+      TRAFFIC_BACKEND: http://traffic:8080
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - traffic

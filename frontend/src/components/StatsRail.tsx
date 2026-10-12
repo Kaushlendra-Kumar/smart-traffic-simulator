@@ -19,8 +19,8 @@ export function StatsRail() {
         ["Queued right now", fmt.int(queueNow)],
         ["Average queue", m.measured_seconds > 0 ? fmt.num(m.avg_queue) : "–", "Time-weighted, vehicles below 2 m/s at signals"],
         ["Longest queue", fmt.int(m.max_queue), "Single approach, since warm-up"],
-        ["Throughput", `${fmt.int(m.throughput_vph)} veh/h`],
-        ["Pedestrian wait", m.peds_completed > 0 ? fmt.secs(m.ped_avg_wait) : "–", `${fmt.int(m.peds_completed)} crossed`],
+        ["Throughput", m.measured_seconds > 0 ? `${fmt.int(m.throughput_vph)} veh/h` : "–"],
+        ["Pedestrian wait", m.measured_seconds > 0 && m.peds_completed > 0 ? fmt.secs(m.ped_avg_wait) : "–", `${fmt.int(m.peds_completed)} crossed`],
         ["Stops per vehicle", measured ? fmt.num(m.avg_stops, 2) : "–"],
       ]
     : [];
