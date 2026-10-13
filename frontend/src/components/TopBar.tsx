@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { engineMode } from "../api/backend";
 import { api } from "../api/client";
 import { controllerName, fmt } from "../format";
 import { store, useSim } from "../state/store";
@@ -76,8 +77,13 @@ export function TopBar() {
         <span className="clock-meta">{controllerName(sim.curr?.snap.controller ?? status?.controller ?? "")}, seed {status?.seed ?? "–"}</span>
       </div>
 
-      <div className={`conn conn-${sim.connection}`} title={`WebSocket ${sim.connection}`}>
-        {sim.connection === "open" ? "Live" : sim.connection === "connecting" ? "Connecting" : "Offline"}
+      <div
+        className={`conn conn-${sim.connection}`}
+        title={engineMode === "wasm" ? "The C++ engine runs in this browser (WebAssembly)" : `WebSocket ${sim.connection}`}
+      >
+        {sim.connection === "open"
+          ? engineMode === "wasm" ? "In browser" : "Live"
+          : sim.connection === "connecting" ? "Connecting" : "Offline"}
       </div>
     </header>
   );

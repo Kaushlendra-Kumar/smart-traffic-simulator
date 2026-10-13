@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { remoteBackend } from "../api/backend";
+import { engineMode, remoteBackend } from "../api/backend";
 import { TrafficRenderer } from "../canvas/renderer";
 import { store, useSim } from "../state/store";
 
@@ -145,7 +145,15 @@ export function SimCanvas({ options, selectedRoad, onSelectRoad }: Props) {
   };
 
   let overlay: { title: string; body: string } | null = null;
-  if (sim.connection !== "open" && !sim.network)
+  if (sim.connection !== "open" && !sim.network && engineMode === "wasm")
+    overlay =
+      sim.connection === "closed"
+        ? {
+            title: "The simulation engine couldn't start",
+            body: "This page runs the C++ engine in your browser with WebAssembly. Try a current version of Chrome, Edge, Firefox or Safari.",
+          }
+        : { title: "Starting the simulation engine…", body: "Loading the C++ engine (WebAssembly) into your browser." };
+  else if (sim.connection !== "open" && !sim.network)
     overlay = remoteBackend
       ? {
           title: "Waking up the simulation server…",

@@ -94,6 +94,27 @@ flowchart LR
 5. Scenario configuration (`ScenarioConfig`, immutable) is separate from runtime state
    (`SimulationEngine`). Reset rebuilds the engine from the configuration.
 
+## Browser (static) runtime
+
+For free static hosting the same engine is compiled to WebAssembly with Emscripten
+(`scripts/build_wasm.sh`, bindings in `src/wasm/wasm_bindings.cpp`). In that build:
+
+```mermaid
+flowchart LR
+  UI[React UI + Canvas] <-->|protocol-v1 JSON| LW[Live worker<br/>SimulationSession in WASM<br/>accumulator pacing]
+  UI <-->|request / progress / result| EW[Experiment worker<br/>ExperimentJob in WASM]
+```
+
+- `SimulationSession` (load, reset, seek, commands, settings that survive reset, JSON
+  serialisation) is shared by the native `SimulationCoordinator` thread and the browser
+  live worker, so behaviour can't drift between the two.
+- The live worker reproduces the coordinator's pacing and ordering rules (fixed steps,
+  250 ms catch-up cap, 20 Hz snapshots, publish-before-acknowledge) and emits the same
+  messages as the WebSocket gateway; the UI swaps `SimSocket` for `LocalEngineTransport`.
+- Experiments run one run at a time in a second worker (no threads in this build), so the
+  live view never stalls; results are identical to native runs.
+- The server build never downloads the WebAssembly module (it's a lazily loaded chunk).
+
 ## Key design decisions
 
 | Decision | Why | Alternatives rejected |
@@ -105,6 +126,7 @@ flowchart LR
 | Immutable snapshots via `atomic<shared_ptr<const T>>` | Readers never block the simulation thread and can hold old frames safely | Double buffering with locks |
 | Latest-wins telemetry, bounded control channel | Slow clients get fresh state with bounded memory; commands are never dropped silently | Unbounded per-client queues — [ADR 0004](adr/0004-backpressure.md) |
 | Hand-written HTTP/WebSocket on standalone Asio | Small, auditable surface; one dependency already required for async I/O | Boost.Beast (heavier dependency), a separate web framework |
+| Same engine compiled to WebAssembly for static hosting | Free hosting without a server; reuses the exact C++ code and protocol | Rewriting the engine in TypeScript (two implementations), or a paid always-on server |
 | Separate seeded RNG streams | Demand realisation is identical across controllers, enabling paired comparisons | One global RNG — [ADR 0005](adr/0005-paired-experiments.md) |
 
 ## Simulation step sequence

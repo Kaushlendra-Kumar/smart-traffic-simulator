@@ -14,7 +14,18 @@ export interface CommandResult {
 
 type Listener = (msg: ServerMsg) => void;
 
-export class SimSocket {
+/** What the store needs from a connection to a simulation (server or in-browser engine). */
+export interface Transport {
+  state: ConnectionState;
+  lastSeq: number;
+  gaps: number;
+  connect(): void;
+  close(): void;
+  send(cmd: Record<string, unknown>): Promise<CommandResult>;
+  resync(): void;
+}
+
+export class SimSocket implements Transport {
   private ws: WebSocket | null = null;
   private nextId = 1;
   private pending = new Map<string, (r: CommandResult) => void>();

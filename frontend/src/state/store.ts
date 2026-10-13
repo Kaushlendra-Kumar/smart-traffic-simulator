@@ -3,7 +3,8 @@
 // don't re-render for every moving vehicle.
 
 import { useSyncExternalStore } from "react";
-import { SimSocket, defaultSocketUrl, type CommandResult, type ConnectionState } from "../api/socket";
+import type { CommandResult, ConnectionState, Transport } from "../api/socket";
+import { createTransport } from "../api/transport";
 import type { MetricsMsg, NetworkMsg, ServerMsg, SnapshotMsg, StatusMsg } from "../types/protocol";
 
 export interface Frame {
@@ -27,7 +28,7 @@ class SimStore {
   toasts: Toast[] = [];
   /** Server time between frames, used to size the interpolation window. */
   frameInterval = 50;
-  socket: SimSocket;
+  socket: Transport;
 
   private version = 0;
   private listeners = new Set<() => void>();
@@ -35,7 +36,7 @@ class SimStore {
   private toastId = 1;
 
   constructor() {
-    this.socket = new SimSocket(defaultSocketUrl(), (m) => this.handle(m), (s) => {
+    this.socket = createTransport((m) => this.handle(m), (s) => {
       this.connection = s;
       this.notify(true);
     });

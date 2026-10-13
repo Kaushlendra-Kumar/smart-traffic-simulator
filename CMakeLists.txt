@@ -103,6 +103,7 @@ add_library(traffic_infra
   src/infrastructure/scenario_io.cpp
   src/infrastructure/snapshot_json.cpp
   src/infrastructure/command_parser.cpp
+  src/infrastructure/simulation_session.cpp
   src/infrastructure/simulation_coordinator.cpp
   src/infrastructure/experiment_io.cpp
 )

@@ -27,6 +27,8 @@ repeatable experiments that explain *why* one strategy beats another.
   data-driven explanations. Results export to CSV.
 - **Determinism**: the same scenario, seed and command log reproduce a run bit-for-bit;
   the server can seek to any time by replay.
+- **Two runtimes, one engine**: the same C++ code runs natively behind the server and in
+  the browser as WebAssembly (`scripts/build_wasm.sh`), producing identical results.
 
 ## Results (measured, 10 seeds, 900–1500 s per run)
 
@@ -76,10 +78,11 @@ http://localhost:8080.
 
 ### Deploying for free
 
-The frontend can go on **Vercel**; the C++ server needs a host that keeps one process
-running with WebSockets, such as **Render's free Docker tier** (`render.yaml` included).
-Or deploy only to Render — the server also serves the frontend. Step-by-step guide,
-including running on Windows: [docs/deployment.md](docs/deployment.md).
+`git push` to GitHub, import the repository on **Vercel**, deploy — no settings, no card.
+The deployed site runs the C++ engine **in the visitor's browser** (compiled to
+WebAssembly, running in a Web Worker), so it's a purely static site. The native
+REST/WebSocket server is still the way to run it locally (`docker compose up`) or on a
+container host. Guide: [docs/deployment.md](docs/deployment.md).
 
 ### Headless
 
@@ -121,11 +124,12 @@ Sanitizer presets assume GCC or Clang on Linux/macOS; MSVC builds ignore them.
 ```text
 include/traffic/   engine headers (core, network, vehicles, signals, pedestrians,
                    controllers, metrics, experiments, infrastructure)
-src/               engine, infrastructure (JSON, coordinator), api (HTTP/WS server), cli
+src/               engine, infrastructure (JSON, session, coordinator), api (HTTP/WS server),
+                   cli, wasm (Emscripten bindings)
 tests/             unit, integration (simulation, coordinator, server), simulation (invariants)
 benchmarks/        Google Benchmark suites
 config/            server config and scenario library
-frontend/          React + TypeScript + Vite + Canvas UI
+frontend/          React + TypeScript + Vite + Canvas UI (src/engine: WebAssembly workers)
 scripts/           dev runner, experiment CSV analysis
 docs/              architecture, system design, model, algorithms, API, concurrency,
                    performance, ADRs, implementation plan and progress

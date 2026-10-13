@@ -1,4 +1,4 @@
-import { apiUrl } from "./backend";
+import { apiUrl, engineMode } from "./backend";
 import type { ExperimentResult, ExperimentStatus, MetricsMsg, ScenarioSummary } from "../types/protocol";
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -16,12 +16,27 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+type LocalApi = typeof import("../engine/local").localApi;
+let local: LocalApi | null = null;
+const loadLocal = (): Promise<LocalApi> =>
+  import("../engine/local").then((m) => {
+    local = m.localApi;
+    return local;
+  });
+const wasm = engineMode === "wasm";
+
 export const api = {
-  scenarios: () => request<ScenarioSummary[]>("GET", "/api/v1/scenarios"),
-  metrics: () => request<MetricsMsg>("GET", "/api/v1/metrics"),
-  startExperiment: (body: unknown) => request<{ id: string }>("POST", "/api/v1/experiments", body),
-  experiment: (id: string) => request<ExperimentStatus>("GET", `/api/v1/experiments/${id}`),
-  experimentResults: (id: string) => request<ExperimentResult>("GET", `/api/v1/experiments/${id}/results`),
-  cancelExperiment: (id: string) => request<unknown>("DELETE", `/api/v1/experiments/${id}`),
-  csvUrl: (id: string) => apiUrl(`/api/v1/experiments/${id}/results.csv`),
+  scenarios: () => (wasm ? loadLocal().then((l) => l.scenarios()) : request<ScenarioSummary[]>("GET", "/api/v1/scenarios")),
+  metrics: () => (wasm ? loadLocal().then((l) => l.metrics()) : request<MetricsMsg>("GET", "/api/v1/metrics")),
+  startExperiment: (body: unknown) =>
+    wasm ? loadLocal().then((l) => l.startExperiment(body)) : request<{ id: string }>("POST", "/api/v1/experiments", body),
+  experiment: (id: string) =>
+    wasm ? loadLocal().then((l) => l.experiment(id)) : request<ExperimentStatus>("GET", `/api/v1/experiments/${id}`),
+  experimentResults: (id: string) =>
+    wasm
+      ? loadLocal().then((l) => l.experimentResults(id))
+      : request<ExperimentResult>("GET", `/api/v1/experiments/${id}/results`),
+  cancelExperiment: (id: string) =>
+    wasm ? loadLocal().then((l) => l.cancelExperiment(id)) : request<unknown>("DELETE", `/api/v1/experiments/${id}`),
+  csvUrl: (id: string) => (wasm ? (local?.csvUrl(id) ?? "#") : apiUrl(`/api/v1/experiments/${id}/results.csv`)),
 };

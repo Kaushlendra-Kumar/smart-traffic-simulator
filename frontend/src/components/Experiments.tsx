@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ErrorBar, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { engineMode } from "../api/backend";
 import { api } from "../api/client";
 import { controllerName, fmt } from "../format";
 import { useSim } from "../state/store";
@@ -112,7 +113,9 @@ export function ExperimentsPanel() {
       </form>
       <p className="muted small">
         Each seed fixes one demand realisation: every controller sees exactly the same arrivals, routes and drivers, so differences are paired.
-        Runs execute in parallel on the server, separate from the live view.
+        {engineMode === "wasm"
+          ? "Runs execute in your browser in a background worker, separate from the live view."
+          : "Runs execute in parallel on the server, separate from the live view."}
       </p>
       {busy && job && (
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={job.progress.total} aria-valuenow={job.progress.done}>

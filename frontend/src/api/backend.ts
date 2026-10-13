@@ -6,6 +6,13 @@
 //   VITE_BACKEND_URL=https://smart-traffic-simulator.onrender.com
 //   (used when the frontend is hosted on Vercel and the server on Render).
 
+/**
+ * "wasm": the C++ engine runs in this browser (WebAssembly in a Web Worker) — a fully
+ *         static site with no server. Selected with VITE_ENGINE=wasm at build time.
+ * "server": talk to traffic_server over REST + WebSocket (default).
+ */
+export const engineMode: "wasm" | "server" = import.meta.env.VITE_ENGINE === "wasm" ? "wasm" : "server";
+
 const configured = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.trim().replace(/\/+$/, "") ?? "";
 
 /** True when the frontend talks to a server on another host. */

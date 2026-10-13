@@ -14,6 +14,9 @@ template <class... Ts>
 struct overloaded : Ts... {
   using Ts::operator()...;
 };
+// Explicit deduction guide: older compilers (e.g. Clang 15) lack aggregate CTAD.
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 std::string fmt(double x) {
   std::ostringstream os;

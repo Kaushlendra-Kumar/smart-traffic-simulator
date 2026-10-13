@@ -23,6 +23,9 @@ template <class... Ts>
 struct overloaded : Ts... {
   using Ts::operator()...;
 };
+// Explicit deduction guide: older compilers (e.g. Clang 15) lack aggregate CTAD.
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 void hash_mix(std::uint64_t& h, const void* data, std::size_t n) {
   const auto* p = static_cast<const unsigned char*>(data);

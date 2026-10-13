@@ -22,6 +22,7 @@
 #include "traffic/core/simulation_engine.hpp"
 #include "traffic/infrastructure/command_parser.hpp"
 #include "traffic/infrastructure/command_queue.hpp"
+#include "traffic/infrastructure/simulation_session.hpp"
 
 namespace traffic {
 
@@ -95,14 +96,8 @@ class SimulationCoordinator {
     std::shared_ptr<const ScenarioConfig> scenario;
     CommandCallback done;
   };
-  enum class State { Ready, Running, Paused };
 
   void loop();
-  CommandResult handle(Envelope& env);
-  CommandResult handle_control(const ControlCommand& c, const std::shared_ptr<const ScenarioConfig>& scenario);
-  std::vector<std::string> rebuild(const ScenarioConfig& base, std::uint64_t seed, bool apply_settings);
-  CommandResult seek(double time);
-  void remember_setting(const EngineCommand& c);
   void publish_frame();
   void publish_network();
   void publish_metrics();
@@ -115,16 +110,7 @@ class SimulationCoordinator {
   std::atomic<bool> stop_{false};
 
   // ---- owned by the simulation thread (or by the caller before start())
-  std::unique_ptr<SimulationEngine> engine_;
-  ScenarioConfig base_;
-  struct Settings {
-    std::optional<ControllerConfig> controller;
-    std::optional<double> demand, pedestrian_demand;
-    std::map<VehicleType, bool> types;
-    std::map<NodeId, std::vector<double>> greens;
-  } settings_;
-  State state_ = State::Ready;
-  double speed_ = 1.0;
+  SimulationSession session_;
   double accumulator_ = 0.0;
   bool lagging_ = false;
   std::uint64_t seq_ = 0;

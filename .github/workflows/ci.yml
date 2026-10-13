@@ -54,6 +54,19 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm test
       - run: npm run build
+      - run: npm run build:static
+
+  wasm:
+    name: WebAssembly engine
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Emscripten and headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends emscripten nlohmann-json3-dev
+      - name: Compile the engine to WebAssembly
+        run: scripts/build_wasm.sh
 
   docker:
     runs-on: ubuntu-24.04

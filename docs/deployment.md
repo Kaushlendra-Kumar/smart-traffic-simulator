@@ -1,18 +1,38 @@
 # Running locally and deploying for free
 
-The project has two parts that need different kinds of hosting:
+The project can run in two ways from the same code:
 
-| Part | What it is | Free host |
-| --- | --- | --- |
-| Frontend (`frontend/`) | Static files after `npm run build` | **Vercel** |
-| Server (`traffic_server`) | A long-running C++ process that keeps one live simulation in memory and streams it over WebSocket | **Render** (free Docker web service) |
+| Mode | Where the C++ engine runs | Hosting | Card needed |
+| --- | --- | --- | --- |
+| **Static (recommended for sharing)** | In each visitor's browser, compiled to WebAssembly and run in a Web Worker | Any static host: **Vercel**, GitHub Pages, Cloudflare Pages | No |
+| **Server** | `traffic_server` (native C++, REST + WebSocket) | A container host such as Render or your own machine | Usually (free tiers of container hosts now ask for one) |
 
-Vercel can't run the server: its functions run Node, Bun or Python only, WebSocket
-connections close after at most 300 s on the free plan, and memory isn't shared between
-instances. The server needs one process that stays up, so it goes to Render.
+Both modes use the same engine, the same session logic (`SimulationSession`) and the same
+JSON protocol, so the UI behaves the same. Results are identical too: an experiment run
+in the browser matches `traffic_cli` to the last digit.
 
-You can also skip Vercel entirely: the server serves the built frontend itself, so the
-Render URL alone is a complete deployment (see option B).
+## Deploy the static site on Vercel (free, no card)
+
+1. Push to GitHub (see section 2 below).
+2. On https://vercel.com: **Add New → Project**, import `smart-traffic-simulator`.
+3. Leave **Root Directory** as the repository root and don't change the build settings:
+   `vercel.json` already sets `npm run build:static` and the output folder. You don't need
+   any environment variables.
+4. Deploy. You get `https://smart-traffic-simulator.vercel.app` (or similar).
+
+Every `git push` to `main` redeploys automatically. Nothing sleeps, there are no cold
+starts, and there's no server that could run up a bill.
+
+The compiled engine (`frontend/src/wasm/traffic-engine.js`) is committed to the repository,
+so Vercel doesn't need Emscripten. After changing C++ engine code, rebuild it with
+`scripts/build_wasm.sh` (needs [Emscripten](https://emscripten.org/docs/getting_started/downloads.html);
+easiest from WSL/Linux: `sudo apt-get install emscripten`) and commit the result.
+
+GitHub Pages or Cloudflare Pages work the same way: build command
+`cd frontend && npm ci && npm run build:static`, output folder `frontend/dist`.
+
+To try the static build locally: `cd frontend && npm run dev:static`, then open
+http://localhost:5173 (no C++ server needed).
 
 ## 1. Run locally (Windows)
 
@@ -77,7 +97,10 @@ If the folder isn't a git repository yet, run `git init`, `git add .` and
 The included GitHub Actions workflow then builds and tests everything on each push
 (GCC, Clang, AddressSanitizer, ThreadSanitizer, frontend, Docker image).
 
-## 3. Deploy the server on Render (free)
+## 3. (Optional) Deploy the server on Render
+
+Render's free tier now asks for a card. Only needed if you want the REST/WebSocket server
+online (for example, to show the API itself).
 
 1. Sign up at https://render.com with your GitHub account.
 2. **New → Blueprint**, select `smart-traffic-simulator`. Render reads `render.yaml` and
@@ -102,15 +125,13 @@ What the free tier means in practice:
   the image and are always available.
 - Large experiments (many seeds, the city grid) run noticeably slower than on a laptop.
 
-## 4. Deploy the frontend on Vercel (free)
+### Frontend on Vercel talking to the Render server
 
-1. Sign up at https://vercel.com with GitHub and **Add New → Project**, import the repo.
-2. Set **Root Directory** to `frontend`. Vercel detects Vite; `frontend/vercel.json` sets
-   the build command, output directory and single-page-app rewrites.
-3. Under **Environment Variables** add
+Only if you deployed the server: in the Vercel project, change **Build Command** to
+`cd frontend && npm run build` (server mode) and add
    `VITE_BACKEND_URL` = your Render URL, e.g. `https://smart-traffic-simulator.onrender.com`
    (no trailing slash).
-4. Deploy. The Vercel site loads the UI from Vercel's CDN and talks to Render for the API
+Then redeploy. The Vercel site loads the UI from Vercel's CDN and talks to Render for the API
    (`https://…/api/v1`) and the live stream (`wss://…/ws`). The server already sends CORS
    headers for any origin.
 
