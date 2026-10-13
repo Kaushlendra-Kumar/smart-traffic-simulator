@@ -1,0 +1,15 @@
+# Render Blueprint: the C++ server (REST + WebSocket) as a free Docker web service.
+# Render → New → Blueprint → pick this repository. See docs/deployment.md.
+services:
+  - type: web
+    name: smart-traffic-simulator
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      # The free instance has a small shared CPU: run experiment seeds one at a time.
+      - key: EXPERIMENT_THREADS
+        value: "1"

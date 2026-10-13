@@ -1,7 +1,8 @@
+import { apiUrl } from "./backend";
 import type { ExperimentResult, ExperimentStatus, MetricsMsg, ScenarioSummary } from "../types/protocol";
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(apiUrl(path), {
     method,
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
@@ -22,5 +23,5 @@ export const api = {
   experiment: (id: string) => request<ExperimentStatus>("GET", `/api/v1/experiments/${id}`),
   experimentResults: (id: string) => request<ExperimentResult>("GET", `/api/v1/experiments/${id}/results`),
   cancelExperiment: (id: string) => request<unknown>("DELETE", `/api/v1/experiments/${id}`),
-  csvUrl: (id: string) => `/api/v1/experiments/${id}/results.csv`,
+  csvUrl: (id: string) => apiUrl(`/api/v1/experiments/${id}/results.csv`),
 };

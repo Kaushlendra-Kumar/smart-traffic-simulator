@@ -8,3 +8,7 @@ frontend/dist/
 !docs/**/*.csv
 .DS_Store
 data/experiments/
+
+frontend/.env
+frontend/.env.local
+*.tsbuildinfo

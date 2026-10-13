@@ -1,9 +1,15 @@
 // traffic_server — REST + WebSocket front-end for the simulation engine.
 //
 //   traffic_server [--config config/default.json] [--port N] [--host H]
+//
+// Environment overrides (for container platforms such as Render): PORT, HOST,
+// EXPERIMENT_THREADS. Command-line flags take precedence over the environment, which
+// takes precedence over the config file.
 //                  [--scenario-dir DIR] [--static-dir DIR] [--scenario ID]
 
+#include <algorithm>
 #include <csignal>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -51,7 +57,12 @@ int main(int argc, char** argv) {
 
   api::ServerConfig server_cfg;
   server_cfg.host = get("host", "host", "0.0.0.0");
-  server_cfg.port = static_cast<std::uint16_t>(flags.contains("port") ? std::stoi(flags["port"]) : cfg.value("port", 8080));
+  const char* env_port = std::getenv("PORT");
+  const char* env_host = std::getenv("HOST");
+  if (!flags.contains("host") && env_host && *env_host) server_cfg.host = env_host;
+  server_cfg.port = static_cast<std::uint16_t>(flags.contains("port")       ? std::stoi(flags["port"])
+                                               : env_port && *env_port ? std::stoi(env_port)
+                                                                       : cfg.value("port", 8080));
   server_cfg.static_dir = get("static-dir", "static_dir", "frontend/dist");
   if (!std::filesystem::exists(server_cfg.static_dir)) {
     spdlog::warn("server event=no_frontend static_dir=\"{}\" (run `npm run build` in frontend/ or use the Vite dev server)",
@@ -82,7 +93,10 @@ int main(int argc, char** argv) {
     spdlog::error("scenario event=load_failed id={} error=\"{}\"", initial->id, errors.front());
     return 1;
   }
-  api::ExperimentManager experiments(static_cast<std::size_t>(cfg.value("max_experiments", 20)), cfg.value("experiment_threads", 0));
+  int experiment_threads = cfg.value("experiment_threads", 0);
+  if (const char* env_threads = std::getenv("EXPERIMENT_THREADS"); env_threads && *env_threads)
+    experiment_threads = std::max(0, std::atoi(env_threads));
+  api::ExperimentManager experiments(static_cast<std::size_t>(cfg.value("max_experiments", 20)), experiment_threads);
   api::Server server(server_cfg, coordinator, scenarios, experiments);
   coordinator.set_listeners([&](auto f) { server.on_frame(std::move(f)); }, [&](auto n) { server.on_network(std::move(n)); },
                             [&](auto s) { server.on_status(std::move(s)); });

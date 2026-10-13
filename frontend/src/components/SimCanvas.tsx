@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { remoteBackend } from "../api/backend";
 import { TrafficRenderer } from "../canvas/renderer";
 import { store, useSim } from "../state/store";
 
@@ -145,10 +146,15 @@ export function SimCanvas({ options, selectedRoad, onSelectRoad }: Props) {
 
   let overlay: { title: string; body: string } | null = null;
   if (sim.connection !== "open" && !sim.network)
-    overlay = {
-      title: sim.connection === "connecting" ? "Connecting to the simulation server…" : "Can't reach the simulation server",
-      body: "Start it with ./build/release/traffic_server from the repository root. This page reconnects automatically.",
-    };
+    overlay = remoteBackend
+      ? {
+          title: "Waking up the simulation server…",
+          body: "The free server sleeps after 15 minutes without visitors and takes about a minute to start. This page connects as soon as it's up.",
+        }
+      : {
+          title: sim.connection === "connecting" ? "Connecting to the simulation server…" : "Can't reach the simulation server",
+          body: "Start it with ./build/release/traffic_server (or docker compose up) from the repository root. This page reconnects automatically.",
+        };
   else if (sim.connection === "closed")
     overlay = { title: "Connection lost", body: "Reconnecting. The view shows the last state received." };
 

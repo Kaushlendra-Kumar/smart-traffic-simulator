@@ -71,9 +71,15 @@ cd frontend && npm ci && npm run build && cd ..
 
 For UI development with hot reload run `scripts/dev.sh` (server on :8080, Vite on :5173).
 
-With Docker: `docker compose up --build`, then open http://localhost:8080.
-(The image could not be built inside the sandbox this project was developed in because
-Docker Hub was unreachable there; CI builds it and smoke-tests the container.)
+With Docker (also the easiest route on Windows): `docker compose up --build`, then open
+http://localhost:8080.
+
+### Deploying for free
+
+The frontend can go on **Vercel**; the C++ server needs a host that keeps one process
+running with WebSockets, such as **Render's free Docker tier** (`render.yaml` included).
+Or deploy only to Render — the server also serves the frontend. Step-by-step guide,
+including running on Windows: [docs/deployment.md](docs/deployment.md).
 
 ### Headless
 
@@ -136,6 +142,7 @@ docs/              architecture, system design, model, algorithms, API, concurre
 | [api-specification.md](docs/api-specification.md) | REST endpoints and WebSocket protocol v1 |
 | [concurrency.md](docs/concurrency.md) | Thread ownership, queue guarantees, snapshot immutability |
 | [performance.md](docs/performance.md) | Benchmark method, measured results, profiling, optimisations |
+| [deployment.md](docs/deployment.md) | Running on Windows, pushing, free hosting on Render + Vercel |
 | [adr/](docs/adr/) | Architecture decision records |
 
 ## Known limitations

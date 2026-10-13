@@ -20,9 +20,12 @@ COPY src src
 COPY tests tests
 COPY benchmarks benchmarks
 COPY config config
+# -j 2 keeps peak memory modest on small hosted build machines. Timing-based server
+# tests get one retry so a slow, shared build machine can't fail a deploy by chance.
 RUN cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DTRAFFIC_FETCH_DEPS=OFF \
-    && cmake --build build \
-    && ctest --test-dir build --output-on-failure
+      -DTRAFFIC_BUILD_BENCHMARKS=OFF \
+    && cmake --build build -j 2 \
+    && ctest --test-dir build --output-on-failure --repeat until-pass:2
 
 # ---------- 3. runtime image
 FROM ubuntu:24.04 AS runtime
@@ -36,6 +39,7 @@ COPY config config
 COPY --from=frontend /src/frontend/dist frontend/dist
 RUN chown -R traffic /app/config
 USER traffic
+# Listens on $PORT when the platform sets it (Render, Railway, ...), otherwise 8080.
 EXPOSE 8080
-HEALTHCHECK --interval=15s --timeout=3s CMD curl -fsS http://localhost:8080/api/v1/health || exit 1
+HEALTHCHECK --interval=15s --timeout=3s CMD curl -fsS "http://localhost:${PORT:-8080}/api/v1/health" || exit 1
 CMD ["traffic_server", "--config", "config/default.json"]

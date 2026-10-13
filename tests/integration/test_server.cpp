@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <filesystem>
+#include <random>
 #include <thread>
 
 #include <asio.hpp>
@@ -31,7 +32,7 @@ struct Response {
 class ServerFixture : public ::testing::Test {
  protected:
   void SetUp() override {
-    dir_ = std::filesystem::temp_directory_path() / ("traffic-test-" + std::to_string(::getpid()) + "-" +
+    dir_ = std::filesystem::temp_directory_path() / ("traffic-test-" + std::to_string(std::random_device{}()) + "-" +
                                                     ::testing::UnitTest::GetInstance()->current_test_info()->name());
     std::filesystem::remove_all(dir_);
     std::filesystem::create_directories(dir_);

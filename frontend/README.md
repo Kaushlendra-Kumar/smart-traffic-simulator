@@ -14,6 +14,10 @@ npm run build      # production bundle in dist/, served by traffic_server
 
 Set `TRAFFIC_BACKEND=http://host:port` to point the dev server at another backend.
 
+When the frontend is hosted separately from the server (e.g. Vercel + Render), build with
+`VITE_BACKEND_URL=https://your-server.example.com` so REST calls and the WebSocket go
+there. See `../docs/deployment.md`.
+
 | Path | Purpose |
 | --- | --- |
 | `src/api/socket.ts` | WebSocket client: reconnect with backoff, command acks by id, resync |
